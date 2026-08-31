@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Gia phả dòng họ Nguyễn',
+  title: 'Gia phả dòng họ Nguyễn- Thái Bình',
   description: 'Gia phả dòng họ Nguyễn — Quản lý gia phả & kết nối cộng đồng dòng họ',
 };
 
