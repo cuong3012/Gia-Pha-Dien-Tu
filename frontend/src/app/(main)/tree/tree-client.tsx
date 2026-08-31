@@ -821,18 +821,16 @@ export default function TreeViewPage() {
                     </div>
 
                     {/* ⭐⭐⭐ NÚT THÊM THÀNH VIÊN - CHỈ HIỂN THỊ KHI ADMIN ⭐⭐⭐ */}
-                    {isAdmin && (
-                        <Button
-                            variant="default"
-                            size="sm"
-                            className="h-8 px-3 bg-green-600 hover:bg-green-700 text-white flex items-center gap-1 shadow-sm"
-                            onClick={() => setShowAddDialog(true)}
-                            title="Thêm thành viên mới vào gia phả"
-                        >
-                            <Plus className="h-3.5 w-3.5" />
-                            <span className="hidden sm:inline">Thêm</span>
-                        </Button>
-                    )}
+                    <Button
+    variant="default"
+    size="sm"
+    className="h-8 px-3 bg-green-600 hover:bg-green-700 text-white flex items-center gap-1 shadow-sm"
+    onClick={() => setShowAddDialog(true)}
+    title="Thêm thành viên mới vào gia phả"
+>
+    <Plus className="h-3.5 w-3.5" />
+    <span className="hidden sm:inline">Thêm</span>
+</Button>
 
                     {/* Search */}
                     <div className="relative">
