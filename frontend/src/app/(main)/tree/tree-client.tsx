@@ -16,6 +16,8 @@ import {
     removeChildFromFamily as supaRemoveChild,
     updatePersonLiving as supaUpdatePersonLiving,
     updatePerson as supaUpdatePerson,
+    addPerson as supaAddPerson,
+    addFamily as supaAddFamily,
 } from '@/lib/supabase-data';
 import {
     computeLayout, filterAncestors, filterDescendants,
@@ -1035,6 +1037,23 @@ export default function TreeViewPage() {
                             });
                             supaUpdatePerson(handle, fields);
                         }}
+                        onAddChild={async (parentHandle: string, childName: string, childGender: number) => {
+                            const parent = treeData?.people.find(p => p.handle === parentHandle);
+                            if (!parent) return;
+                            const fam = treeData?.families.find(f => f.fatherHandle === parentHandle || f.motherHandle === parentHandle);
+                            let famHandle = fam?.handle;
+                            if (!famHandle) {
+                                famHandle = 'F' + Date.now().toString(36).toUpperCase();
+                                await supaAddFamily({ handle: famHandle, fatherHandle: parent.gender === 1 ? parentHandle : undefined, motherHandle: parent.gender === 2 ? parentHandle : undefined, children: [] });
+                            }
+                            const newHandle = 'P' + Date.now().toString(36).toUpperCase();
+                            const gen = ((parent as any).generation ?? 0) + 1;
+                            await supaAddPerson({ handle: newHandle, displayName: childName, gender: childGender, generation: gen, isLiving: true, parentFamilies: [famHandle] });
+                            const children = fam?.children || [];
+                            await supaUpdateFamilyChildren(famHandle, [...children, newHandle]);
+                            const data = await fetchTreeData();
+                            setTreeData(data);
+                        }}
                         onReset={async () => {
                             const data = await fetchTreeData();
                             setTreeData(data);
@@ -1502,7 +1521,7 @@ function StatsOverlay({ stats, onClose }: { stats: TreeStats; onClose: () => voi
 }
 
 // === Editor Panel Component ===
-function EditorPanel({ selectedCard, treeData, onReorderChildren, onMoveChild, onRemoveChild, onToggleLiving, onUpdatePerson, onReset, onClose }: {
+function EditorPanel({ selectedCard, treeData, onReorderChildren, onMoveChild, onRemoveChild, onToggleLiving, onUpdatePerson, onAddChild, onReset, onClose }: {
     selectedCard: string | null;
     treeData: { people: TreeNode[]; families: TreeFamily[] } | null;
     onReorderChildren: (familyHandle: string, newOrder: string[]) => void;
@@ -1510,9 +1529,13 @@ function EditorPanel({ selectedCard, treeData, onReorderChildren, onMoveChild, o
     onRemoveChild: (childHandle: string, familyHandle: string) => void;
     onToggleLiving: (handle: string, isLiving: boolean) => void;
     onUpdatePerson: (handle: string, fields: Record<string, unknown>) => void;
+    onAddChild: (parentHandle: string, childName: string, childGender: number) => void;
     onReset: () => void;
     onClose: () => void;
 }) {
+    const [showAddChild, setShowAddChild] = useState(false);
+    const [newChildName, setNewChildName] = useState('');
+    const [newChildGender, setNewChildGender] = useState(1);
     const [editName, setEditName] = useState('');
     const [editBirthYear, setEditBirthYear] = useState('');
     const [editDeathYear, setEditDeathYear] = useState('');
@@ -1674,7 +1697,7 @@ function EditorPanel({ selectedCard, treeData, onReorderChildren, onMoveChild, o
                             </button>
                         </div>
 
-                        {/* Save button */}
+                         {/* Save button */}
                         {dirty && (
                             <button
                                 className="w-full flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors"
@@ -1683,6 +1706,34 @@ function EditorPanel({ selectedCard, treeData, onReorderChildren, onMoveChild, o
                                 <Save className="h-3.5 w-3.5" />{saving ? 'Đang lưu...' : 'Lưu thay đổi → Supabase'}
                             </button>
                         )}
+                        {/* Add child */}
+                        <div className="pt-2 border-t">
+                            {!showAddChild ? (
+                                <button className="w-full text-xs font-medium text-blue-600 hover:text-blue-700 py-1" onClick={() => setShowAddChild(true)}>
+                                    + Thêm con
+                                </button>
+                            ) : (
+                                <div className="space-y-1.5">
+                                    <input className="w-full border rounded px-2 py-1 text-sm bg-background" placeholder="Họ tên con"
+                                        value={newChildName} onChange={e => setNewChildName(e.target.value)} />
+                                    <select className="w-full border rounded px-2 py-1 text-sm bg-background"
+                                        value={newChildGender} onChange={e => setNewChildGender(Number(e.target.value))}>
+                                        <option value={1}>Nam</option>
+                                        <option value={2}>Nữ</option>
+                                    </select>
+                                    <div className="flex gap-1.5">
+                                        <button className="flex-1 px-2 py-1 text-xs font-medium rounded bg-blue-600 text-white hover:bg-blue-700"
+                                            onClick={() => {
+                                                if (!newChildName.trim() || !person) return;
+                                                onAddChild(person.handle, newChildName.trim(), newChildGender);
+                                                setNewChildName(''); setNewChildGender(1); setShowAddChild(false);
+                                            }}>Lưu</button>
+                                        <button className="flex-1 px-2 py-1 text-xs font-medium rounded border"
+                                            onClick={() => { setShowAddChild(false); setNewChildName(''); }}>Hủy</button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Children reorder */}
